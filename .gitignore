@@ -1,0 +1,10 @@
+# ignore logs
+*.jpg
+*.SLDPRT
+*.stl
+*.ply
+*.txt
+*.json
+/data
+# igonre checkpoints
+/scene23
