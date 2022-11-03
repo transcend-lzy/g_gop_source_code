@@ -10,8 +10,8 @@ import time
 
 import numpy as np
 from math import cos, sin, asin, atan, pi
-import matlab
-import matlab.engine
+# import matlab
+# import matlab.engine
 
 
 def trans_pyrt_to_matrt2(r, t):
@@ -94,21 +94,21 @@ def abg2rt(a, b, g, x_trans, z_trans, r):
     return worldOrientation, worldLocation, rotationMatrix, translationVector, m2c_r, m2c_t
 
 
-def rt2abg(m2c_r, m2c_t, eng):
-    """
-    将m2c_r, m2c_t 转换为 abgxyr
-    """
-    rotationMatrix, translationVector = trans_pyrt_to_matrt2(m2c_r, m2c_t)
-    # 先转换成worldOrientation, worldLocation
-    worldOrientation, worldLocation = trans_matr2_tomatr(rotationMatrix, translationVector)
-    # 做一次转换，matlab不允许直接使用np
-    r = matlab.double(np.array(worldOrientation).tolist())
-    t = matlab.double(worldLocation.tolist())
-    # 调用matlab函数，文件夹中要有一个同名同名rt2abg.m 里面写了function为rt2abg
-    # eng = matlab.engine.start_matlab()
-    # 输入的rt 是worldOrientation, worldLocation
-    ret = eng.rt2abg(r, t[0])
-    return ret[0]
+# def rt2abg(m2c_r, m2c_t, eng):
+#     """
+#     将m2c_r, m2c_t 转换为 abgxyr
+#     """
+#     rotationMatrix, translationVector = trans_pyrt_to_matrt2(m2c_r, m2c_t)
+#     # 先转换成worldOrientation, worldLocation
+#     worldOrientation, worldLocation = trans_matr2_tomatr(rotationMatrix, translationVector)
+#     # 做一次转换，matlab不允许直接使用np
+#     r = matlab.double(np.array(worldOrientation).tolist())
+#     t = matlab.double(worldLocation.tolist())
+#     # 调用matlab函数，文件夹中要有一个同名同名rt2abg.m 里面写了function为rt2abg
+#     # eng = matlab.engine.start_matlab()
+#     # 输入的rt 是worldOrientation, worldLocation
+#     ret = eng.rt2abg(r, t[0])
+#     return ret[0]
 
 
 def check_abg(orientation, orientation_new):

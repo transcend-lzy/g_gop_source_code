@@ -10,6 +10,9 @@ class OverLay():
     def __init__(self, is_abg=True):
         self.is_abg = is_abg
         self.img_index = 101
+        self.is_linux = False
+        if "home" in parent_dir:
+            self.is_linux = True
         self.img_path = os.path.join('./img', str(self.img_index) + '.jpg')
 
         if is_abg:
@@ -65,8 +68,11 @@ class OverLay():
         display, window = self.init(self.K, width, height)
 
         tri = stl_model(self.cad_path).tri
-        im = np.array(draw_cube_test(self.R, self.T, tri, window, display))
-        im = np.array(draw_cube_test(self.R, self.T, tri, window, display))
+        if self.is_linux:
+            im = np.array(draw_cube_test(self.R, self.T, tri, window, display))
+        else:
+            im = np.array(draw_cube_test(self.R, self.T, tri, window, display))
+            im = np.array(draw_cube_test(self.R, self.T, tri, window, display))
         pose_mask = np.zeros((height, width, 3))
         for i in range(3):
             pose_mask[:, :, i] = im[:, :, i].T
