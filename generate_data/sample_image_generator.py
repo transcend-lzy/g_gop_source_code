@@ -35,7 +35,7 @@ class Gen(object):
         self.FocalLength_y = FocalLength_y / self.scale  # 相机内参
         self.aver_mm = read_yaml(osp.join(self.data_path, 'eight_points.yml'))[self.modelIndex][-1]
         self.aver = np.multiply(self.aver_mm, 0.001)
-        self.stl_path = './CADmodels/stl/{}.stl'.format(self.modelIndex)
+        self.stl_path = osp.join(dir_name, 'generate_data/CADmodels/stl/{}.stl'.format(self.modelIndex))
         self.height = 2048 // self.scale  # 图片长
         self.width = 2448 // self.scale  # 图片宽
         self.start = 0

@@ -171,10 +171,10 @@ class GenPose(object):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--is_val", type=bool, default=True)
-    parser.add_argument("--obj_id", type=str, default='6')
-    parser.add_argument("--set_length", type=int, default=10000)
-    parser.add_argument("--all_set", type=int, default=64)
+    parser.add_argument('-v', '--is_val', action='store_false')
+    parser.add_argument('-o', '--obj_id', type=str, default='6')
+    parser.add_argument('-s', '--set_length', type=int, default=10000)
+    parser.add_argument('-a', '--all_set', type=int, default=64)
     args = parser.parse_args()
     pose_gen = GenPose(int(args.obj_id), args.set_length, args.all_set)
     start_index = 1
