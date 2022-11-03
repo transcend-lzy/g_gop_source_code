@@ -17,27 +17,35 @@ SAMPLE_POSE_GENERATOR = 'sample_pose_generator.py'
 
 def start_sample_image_generator(is_val, obj_id, start, end):
     init_sample_image_generator = osp.join(cur_dir, SAMPLE_IMAGE_GENERATOR)
-    cmd = "python %s --is_val %s --obj_id %s --start %s --end %s" % \
-          (init_sample_image_generator, is_val, obj_id, start, end)
+    if is_val:
+        cmd = "python %s --is_val --obj_id %s --start %s --end %s" % \
+              (init_sample_image_generator, obj_id, start, end)
+    else:
+        cmd = "python %s --obj_id %s --start %s --end %s" % \
+              (init_sample_image_generator, obj_id, start, end)
     logging.info('start_sample_image_generator and cmd is + %s' % cmd)
     os.system(cmd)
 
 
 def start_sample_pose_generator(is_val, obj_id, set_length, all_set):
     init_sample_pose_generator = osp.join(cur_dir, SAMPLE_POSE_GENERATOR)
-    cmd = "python '%s' --is_val %s --obj_id %s --set_length %s --all_set %s" % \
-          (init_sample_pose_generator, is_val, obj_id, set_length, all_set)
+    if is_val:
+        cmd = "python '%s' --is_val --obj_id %s --set_length %s --all_set %s" % \
+              (init_sample_pose_generator, obj_id, set_length, all_set)
+    else:
+        cmd = "python '%s' --obj_id %s --set_length %s --all_set %s" % \
+              (init_sample_pose_generator, obj_id, set_length, all_set)
     logging.info('start_sample_pose_generator and cmd is + %s' % cmd)
     os.system(cmd)
 
 
 def arg_parse():
     parser = argparse.ArgumentParser(description="生成训练数据")
-    parser.add_argument('-o', '--only_image', type=bool, default=False)
+    parser.add_argument('--only_image', action='store_true')
     parser.add_argument('-s', '--start', type=int, default=0)
     parser.add_argument('-e', '--end', type=int, default=1)
     parser.add_argument('-b', '--obj_id', type=str, default='6')
-    parser.add_argument('-v', '--is_val', type=bool, default=False)
+    parser.add_argument('--is_val', action='store_false')
     parser.add_argument('-l', '--set_length', type=int, default=10000)
     parser.add_argument('-a', '--all_set', type=int, default=64)
     args = parser.parse_args()

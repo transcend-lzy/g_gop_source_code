@@ -185,7 +185,7 @@ class Gen(object):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--is_val", type=bool, default=False)
+    parser.add_argument("--is_val", action='store_false')
     parser.add_argument("--obj_id", type=str, default='6')
     parser.add_argument("--start", type=int, default=0)
     parser.add_argument("--end", type=int, default=1)
