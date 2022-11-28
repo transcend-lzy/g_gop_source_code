@@ -177,7 +177,7 @@ if __name__ == '__main__':
     parser.add_argument('-a', '--all_set', type=int, default=64)
     args = parser.parse_args()
     pose_gen = GenPose(int(args.obj_id), args.set_length, args.all_set)
-    start_index = 1
+    start_index = 0
     sample_set = []
     while True:
         pose = pose_gen.dot_generator()
