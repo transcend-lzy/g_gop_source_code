@@ -171,7 +171,7 @@ class GenPose(object):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--is_val', action='store_false') # 默认是true，如果传了就是false
+    parser.add_argument('--is_val', action='store_true') # 默认是false，如果传了就是true
     parser.add_argument('-o', '--obj_id', type=str, default='6')
     parser.add_argument('-s', '--set_length', type=int, default=10000)
     parser.add_argument('-a', '--all_set', type=int, default=64)

@@ -158,8 +158,8 @@ class Gen(object):
                         im = np.array(self.draw_cube_abg(a, b, g, x, y, r, tri, window, display))
                 else:
                     a, b, g, x, y, z = pose[:6]
-                    m2c_r = eulerAnglesToRotationMatrix([a,b,g])
-                    m2c_t = np.array([[x,y,z]])
+                    m2c_r = eulerAnglesToRotationMatrix([a, b, g])
+                    m2c_t = np.array([[x, y, z]])
                     if self.is_linux:
                         im = np.array(self.draw_cube_rt(m2c_r, m2c_t, tri, window, display))
                     else:
@@ -221,8 +221,8 @@ class Gen(object):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--is_val", action='store_false')
-    parser.add_argument("--is_abg", action='store_false')
+    parser.add_argument("--is_val", action='store_true')  # 默认false， 传了就是true
+    parser.add_argument("--is_abg", action='store_true') # 默认false， 传了就是true
     parser.add_argument("--obj_id", type=str, default='6')
     parser.add_argument("--start", type=int, default=0)
     parser.add_argument("--end", type=int, default=1)
