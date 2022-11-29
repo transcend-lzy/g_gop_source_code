@@ -26,7 +26,7 @@ class Gen(object):
         self.pose_path = osp.join(self.data_path, self.modelIndex, 'pose_set')
         mkdir(self.pose_path)
         self.img_path = osp.join(self.data_path, self.modelIndex, 'Edge_im')
-        self.img_npy_path = osp.join(self.data_path, self.modelIndex)
+        self.img_npy_path = osp.join(self.data_path, self.modelIndex, 'train_data')
         mkdir(self.img_npy_path)
         self.scale = 1  # 缩放倍数，正常生成2448*2048的，先生成小一点的再扩大
         self.ox = ox / self.scale  # 相机内参
@@ -186,7 +186,7 @@ class Gen(object):
                 im = im[:, :, 0]
                 assert len(np.shape(im)) == 2 and np.shape(im)[0] == 128 and np.shape(im)[1] == 128
                 dataset.append(im)
-            np.save(osp.join(self.img_npy_path, 'dataset_unit8_{}'.format(j + 1)), dataset)
+            np.save(osp.join(self.img_npy_path, 'dataset_uint8_{}'.format(j + 1)), dataset)
 
     def create_val_img(self):
         display, window = self.init_pygame(self.width, self.height)
@@ -214,10 +214,16 @@ class Gen(object):
             small = cv2.resize(dilation, (128, 128), cv2.INTER_AREA).astype(np.uint8)
             small = cv2.threshold(small, 0, 255, cv2.THRESH_BINARY)
             small = np.array(small[1])
+            im_index += 1
             # show_photo(small)
             cv2.imwrite(osp.join(self.val_img_path, str(im_index) + '.png'), small)
-            im_index += 1
-
+        dataset = []
+        for i in range(1, 641):
+            im = cv2.imread(osp.join(gen_img.val_img_path, str(i) + '.png'))
+            im = im[:, :, 0]
+            assert len(np.shape(im)) == 2 and np.shape(im)[0] == 128 and np.shape(im)[1] == 128
+            dataset.append(im)
+        np.save(osp.join(gen_img.img_npy_path, 'dataset_uint8(validation640).npy'), dataset)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
