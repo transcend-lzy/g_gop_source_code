@@ -8,7 +8,7 @@ from pygame.locals import *
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from read_stl import stl_model
-from tqdm import tqdm
+from tqdm import tqdm, trange
 
 
 class Gen(object):
@@ -218,17 +218,18 @@ class Gen(object):
             # show_photo(small)
             cv2.imwrite(osp.join(self.val_img_path, str(im_index) + '.png'), small)
         dataset = []
-        for i in range(1, 641):
+        for i in trange(1, 641):
             im = cv2.imread(osp.join(gen_img.val_img_path, str(i) + '.png'))
             im = im[:, :, 0]
             assert len(np.shape(im)) == 2 and np.shape(im)[0] == 128 and np.shape(im)[1] == 128
             dataset.append(im)
         np.save(osp.join(gen_img.img_npy_path, 'dataset_uint8(validation640).npy'), dataset)
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--is_val", action='store_true')  # 默认false， 传了就是true
-    parser.add_argument("--is_abg", action='store_true') # 默认false， 传了就是true
+    parser.add_argument("--is_abg", action='store_true')  # 默认false， 传了就是true
     parser.add_argument("--obj_id", type=str, default='6')
     parser.add_argument("--start", type=int, default=0)
     parser.add_argument("--end", type=int, default=1)
