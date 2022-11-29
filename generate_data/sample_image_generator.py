@@ -227,8 +227,7 @@ if __name__ == '__main__':
     parser.add_argument("--start", type=int, default=0)
     parser.add_argument("--end", type=int, default=1)
     args = parser.parse_args()
-    args.is_val = False
-    gen_img = Gen(args.obj_id, False)
+    gen_img = Gen(args.obj_id, args.is_abg)
     if args.is_val:
         gen_img.create_val_img()
     else:
