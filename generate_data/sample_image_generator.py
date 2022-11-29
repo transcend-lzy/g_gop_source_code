@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 
 class Gen(object):
-    def __init__(self, model_index):
+    def __init__(self, model_index, is_abg=True):
         self.modelIndex = str(model_index)
         dir_name = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         if 'home' in dir_name:
@@ -40,6 +40,7 @@ class Gen(object):
         self.width = 2448 // self.scale  # 图片宽
         self.start = 0
         self.end = 0
+        self.is_abg = is_abg
 
     def init_pygame(self, width, height):
         pygame.init()
@@ -109,6 +110,31 @@ class Gen(object):
         tmp_arr = pygame.surfarray.array3d(temp_surf)
         return tmp_arr  # 得到最后的图
 
+    def draw_cube_rt(self, m2c_r, m2c_t, tri, window, display):
+        glPushMatrix()
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+        m2c_r = np.array(m2c_r)
+        m2c_t = np.array(m2c_t)
+        m2c_rt = np.concatenate((np.concatenate((m2c_r, m2c_t.T), 1), np.array([[0, 0, 0, 1]])), 0)
+        c2m_rt = np.linalg.inv(m2c_rt)
+        pos = c2m_rt[0:3, 3]
+        # 以模型坐标系为世界坐标系，则摄像机的位置为pos，摄像机的z轴指向目标物体（该目标物体是opengl的目标物体，并非我们要渲染的目标物体），
+        # 目标物体的位置坐标根据向量加法即可得到，为pos + z
+        # 由于opengl里面定义的相机坐标系与物理相机坐标系不同，不同之处在于opengl坐标系相对于物理坐标系绕x轴旋转180度，
+        # 即yz轴取反，所以此时y轴方向取反
+        obj = pos + c2m_rt[0:3, 2]
+        yy = c2m_rt[0:3, 1]
+        gluLookAt(pos[0], pos[1], pos[2], obj[0], obj[1], obj[2], -yy[0], -yy[1], -yy[2])
+        self.cube(tri)
+        glPopMatrix()
+        pygame.display.flip()
+
+        # Read the result
+        string_image = pygame.image.tostring(window, 'RGB')
+        temp_surf = pygame.image.fromstring(string_image, display, 'RGB')
+        tmp_arr = pygame.surfarray.array3d(temp_surf)
+        return tmp_arr  # 得到最后的图
+
     def create_img(self):
         display, window = self.init_pygame(self.width, self.height)
         tri = stl_model(self.stl_path).tri
@@ -121,14 +147,24 @@ class Gen(object):
             im_index = index * 10000
             for pose in tqdm(pose_set):
                 # pose = pose_set[pose_index]
-                a, b, g, x, y, r = pose[:6]
                 u, v = int(pose[10]), int(pose[11])
                 # im = self.draw_cube_abg(a, b, g, x / 1000, y / 1000, r / 1000, tri, window, display)
-                if self.is_linux:
-                    im = np.array(self.draw_cube_abg(a, b, g, x, y, r, tri, window, display))
+                if self.is_abg:
+                    a, b, g, x, y, r = pose[:6]
+                    if self.is_linux:
+                        im = np.array(self.draw_cube_abg(a, b, g, x, y, r, tri, window, display))
+                    else:
+                        im = np.array(self.draw_cube_abg(a, b, g, x, y, r, tri, window, display))
+                        im = np.array(self.draw_cube_abg(a, b, g, x, y, r, tri, window, display))
                 else:
-                    im = np.array(self.draw_cube_abg(a, b, g, x, y, r, tri, window, display))
-                    im = np.array(self.draw_cube_abg(a, b, g, x, y, r, tri, window, display))
+                    a, b, g, x, y, z = pose[:6]
+                    m2c_r = eulerAnglesToRotationMatrix([a,b,g])
+                    m2c_t = np.array([[x,y,z]])
+                    if self.is_linux:
+                        im = np.array(self.draw_cube_rt(m2c_r, m2c_t, tri, window, display))
+                    else:
+                        im = np.array(self.draw_cube_rt(m2c_r, m2c_t, tri, window, display))
+                        im = np.array(self.draw_cube_rt(m2c_r, m2c_t, tri, window, display))
                 im_new = np.zeros((self.height, self.width, 3))
                 for i in range(3):
                     im_new[:, :, i] = im[:, :, i].T
@@ -141,7 +177,7 @@ class Gen(object):
                 small = cv2.resize(dilation, (128, 128), cv2.INTER_AREA).astype(np.uint8)
                 small = cv2.threshold(small, 0, 255, cv2.THRESH_BINARY)
                 small = np.array(small[1])
-                cv2.imwrite(osp.join(self.img_path, str(index), str(im_index) + '.png'), small)
+                cv2.imwrite(osp.join(self.img_path, str(index), str(im_index) + '_new.png'), small)
         lens = 10000
         for j in range(self.start, self.end):
             dataset = []
@@ -186,11 +222,13 @@ class Gen(object):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--is_val", action='store_false')
+    parser.add_argument("--is_abg", action='store_false')
     parser.add_argument("--obj_id", type=str, default='6')
     parser.add_argument("--start", type=int, default=0)
     parser.add_argument("--end", type=int, default=1)
     args = parser.parse_args()
-    gen_img = Gen(args.obj_id)
+    args.is_val = False
+    gen_img = Gen(args.obj_id, False)
     if args.is_val:
         gen_img.create_val_img()
     else:
