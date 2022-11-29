@@ -1,6 +1,11 @@
+import os
+
 from trans_pose import abg2rt_final
 import numpy as np
 import math
+from utils import mkdir
+import os.path as osp
+import tqdm
 
 
 def eulerAnglesToRotationMatrix(theta):
@@ -60,11 +65,17 @@ def rotationMatrixToEulerAngles(R):
 
 
 if __name__ == '__main__':
-    pose_npy = np.load('../data/6/pose_set/0-10000.npy')
-    for i in range(10000):
-        a, b, g, x, y, r = pose_npy[i][:6]
-        m2c_r, m2c_t = abg2rt_final(a, b, g, x, y, r)
-        rt_g, rt_b, rt_a = rotationMatrixToEulerAngles(m2c_r)[:3]
-        rt_x, rt_y, rt_z = m2c_t[0][:3]
-        pose_npy[i][:6] = [rt_a, rt_b, rt_g, rt_x, rt_y, rt_z]
-    np.save('../data/6/pose_set/0-10000_new.npy', pose_npy)
+    ori_path = '../data/6/pose_set'
+    dst_path = '../data/6/pose_set_rt'
+    mkdir(dst_path)
+    for i in tqdm.trange(64):
+        start = i * 10000
+        end = (i + 1) * 10000
+        pose_npy = np.load(osp.join(ori_path, '{}-{}.npy').format(start, end))
+        for i in range(10000):
+            a, b, g, x, y, r = pose_npy[i][:6]
+            m2c_r, m2c_t = abg2rt_final(a, b, g, x, y, r)
+            rt_g, rt_b, rt_a = rotationMatrixToEulerAngles(m2c_r)[:3]
+            rt_x, rt_y, rt_z = m2c_t[0][:3]
+            pose_npy[i][:6] = [rt_a, rt_b, rt_g, rt_x, rt_y, rt_z]
+        np.save(osp.join(dst_path, '{}-{}.npy').format(start, end), pose_npy)
