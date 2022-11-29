@@ -177,7 +177,7 @@ class Gen(object):
                 small = cv2.resize(dilation, (128, 128), cv2.INTER_AREA).astype(np.uint8)
                 small = cv2.threshold(small, 0, 255, cv2.THRESH_BINARY)
                 small = np.array(small[1])
-                cv2.imwrite(osp.join(self.img_path, str(index), str(im_index) + '_new.png'), small)
+                cv2.imwrite(osp.join(self.img_path, str(index), str(im_index) + '.png'), small)
         lens = 10000
         for j in range(self.start, self.end):
             dataset = []
