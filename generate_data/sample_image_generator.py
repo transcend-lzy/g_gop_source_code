@@ -1,7 +1,13 @@
 import numpy as np
-from utils import *
-import argparse
+import sys
 import os
+import inspect
+
+cur_dir = os.path.realpath(os.path.abspath(os.path.split(inspect.getfile(inspect.currentframe()))[0]))
+sys.path.append(os.path.dirname(cur_dir))
+sys.path.append(os.path.dirname(os.path.dirname(cur_dir)))
+from generate_data.utils_gen import *
+import argparse
 from trans_pose import *
 import pygame
 from pygame.locals import *

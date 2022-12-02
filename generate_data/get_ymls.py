@@ -2,7 +2,7 @@ import yaml
 from convex_hull_3d.main import *
 from read_stl import stl_model
 from trans_pose import *
-from utils import mkdir
+from utils_gen import mkdir
 import matplotlib.pyplot as plt
 
 

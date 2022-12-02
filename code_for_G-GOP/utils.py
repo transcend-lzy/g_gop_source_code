@@ -9,6 +9,9 @@ import torchvision
 from torchvision import transforms
 from torchvision.utils import save_image
 from math import pi, cos, sin, sqrt, asin, atan
+
+from tqdm import tqdm
+
 from config import opt
 import numpy as np
 from PIL import Image
@@ -132,7 +135,7 @@ def show_photos(photos):  # 展示照片
 def init():
     # 创建各种文件夹
     path_list = [opt.main_path, opt.val_sample_path, opt.test_sample_path,
-                 opt.data_path, opt.log_path, opt.log_train, opt.log_test]
+                 opt.data_path, opt.log_path, opt.log_train, opt.log_test, opt.overlay_path]
     for i in path_list:
         if not os.path.exists(i):
             mkdir(i)
@@ -316,7 +319,6 @@ def val_ab(a, b):
 
 
 def creatPose(u_tar, v_tar):
-    try_times = 1
     while True:
         while True:  # 这里while true做的就是把xyz转化为了ab
             index = np.random.randint(len(points))  # sample_num是斐波那契球的全部数量
@@ -357,8 +359,7 @@ def creatPose(u_tar, v_tar):
 
         g, x, y, r = random_gen()
 
-        trans = [(0, 0, 1), (1, 0), (1, 1), (0, -1), (-1, 0), (-1, -1)]
-        spe_points2D = estimate_3D_to_2D(a, b, g, x, z, r, spe_points)
+        spe_points2D = estimate_3D_to_2D(a, b, g, x, y, r, spe_points)
         in_window = True
         for k in range(np.size(spe_points2D, 0)):
             u = spe_points2D[k, 0]
@@ -369,21 +370,47 @@ def creatPose(u_tar, v_tar):
                 break
         if not in_window:
             continue
-        center = estimate_3D_to_2D(a, b, g, x, z, r, [[0, 0, 0]])
+        center = estimate_3D_to_2D(a, b, g, x, y, r, [[0, 0, 0]])
         center = center[0]
         # 零件正好在矩形框中心，这时候的矩形框中心点像素坐标
         center_x, center_y = int(np.round(center[0])), int(np.round(center[1]))
         if center_x <= opt.bbox_len // 2 or center_x >= opt.width - opt.bbox_len // 2 or center_y <= opt.bbox_len // 2 or center_y >= opt.height - opt.bbox_len // 2:
             continue
-        return [a, b, g, x, y, r]
+        if val_pose(a, b, g, x, y, r, u_tar=u_tar, v_tar=v_tar, is_create_val=True, spe_points2D=spe_points2D):
+            return [a, b, g, x, y, r]
 
-        # for i in range(try_times):
-        #     x_new, y_new, r_new = 0, 0, 0
-        #     for j in trans:
-        #         x_new = x + j[0] * i * 2
-        #         y_new = z + j[1] * i * 2
-        #         r_new = r + j[1] * i * 4
-        #         if val_pose(a, b, g, x_new, y_new, r_new, u_tar, v_tar, is_create_val=True, spe_points2D=spe_points2D):
-        #             return [a, b, g, x_new, y_new, r_new]
-        #     if not val_xyr(x_new, y_new, r_new):
-        #         break
+
+
+def overlay_img(overlay_num, scene_dir_name):
+    img_all = np.load(osp.join(opt.data_path, 'img_all.npy'), allow_pickle=True)
+    uv_all = np.load(osp.join(opt.data_path, 'uv_all.npy'), allow_pickle=True)
+    scene_path = osp.join(opt.test_data_root, scene_dir_name)
+    for i in tqdm(range(overlay_num)):
+        u, v = int(uv_all[i][0]), int(uv_all[i][1])
+        top = v
+        bottom = 2048 - opt.bbox_len - v
+        left = u
+        right = 2448 - opt.bbox_len - u
+        np.place(img_all[i], img_all[i] > 0.4, 255)
+        ret, binary = cv2.threshold(img_all[i], 10, 255, cv2.THRESH_BINARY)
+        # show_photos([binary])
+        dilation = cv2.resize(binary, (opt.bbox_len, opt.bbox_len), interpolation=cv2.INTER_AREA)
+        constant = cv2.copyMakeBorder(dilation, top, bottom, left, right, cv2.BORDER_CONSTANT)
+        img = cv2.imread(osp.join(scene_path, 'rgb', str(i + 1) + '.jpg'))
+        height, width = 2048, 2448
+        im3 = np.zeros((height, width, 3))
+        pix_where = np.argwhere(constant)
+        color = [0, 255, 0]
+        for pixel in pix_where:
+            im3[pixel[0]][pixel[1]] = color
+        overlay = cv2.addWeighted(img, 1, im3.astype(np.uint8), 0.5, 0)
+        # show_photos([overlay])
+        cv2.imwrite(osp.join(opt.overlay_path, str(i + 1) + '_only_one.jpg'), overlay)
+    # show_photos([overlay])
+
+
+def save_yaml(dic, file_name):
+    yaml_file = osp.join(opt.data_path, str(file_name) + '.yml')
+    file = open(yaml_file, 'w', encoding='utf-8')
+    yaml.dump(dic, file, Dumper=yaml.RoundTripDumper)
+    file.close()

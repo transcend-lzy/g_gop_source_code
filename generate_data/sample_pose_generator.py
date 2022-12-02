@@ -2,7 +2,7 @@ import os
 import random
 import argparse
 import numpy as np
-from utils import *
+from utils_gen import *
 from math import pi, sqrt, cos, sin, asin
 from trans_pose import abg2rt_final
 
