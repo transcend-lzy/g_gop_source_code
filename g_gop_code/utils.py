@@ -1,7 +1,13 @@
 import os
 import os.path as osp
 import random
-
+import sys
+cur_dir = osp.dirname(osp.dirname(osp.abspath(__file__)))
+sys.path.append(cur_dir)
+sys.path.append(osp.dirname(osp.abspath(__file__)))
+import gradient as grad
+import loop
+import copy
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -28,7 +34,7 @@ def read_yaml(yaml_path):
 
 
 spe_points = read_yaml(osp.join(opt.data_path_root, 'special_points.yml'))[str(opt.obj_id)]
-ranges = read_yaml(osp.join(opt.data_path_root, 'abg_range.yml'))
+ranges = read_yaml(osp.join(opt.data_path, 'abg_range.yml'))
 points = np.load(osp.join(opt.data_path_root, 'fibonacci.npy'))
 Arange = ranges['Arange'][0]
 Brange = ranges['Brange'][0]
@@ -42,6 +48,7 @@ gmin, gmax = Grange[0] - 0.3, Grange[1] + 0.3
 xmin, xmax = Xrange[0] - 0.1, Xrange[1] + 0.1
 ymin, ymax = Zrange[0] - 0.1, Zrange[1] + 0.1
 rmin, rmax = Rrange[0] - 0.05, Rrange[1] + 0.05
+
 
 def min_max(pose):
     pose_new = np.zeros(6)
@@ -78,23 +85,33 @@ def clip_and_scaling(img, xywh, bbox_range, mask=None, mask_small=None):
     r1 = cv2.equalizeHist(r)
 
     img = cv2.merge([b1, g1, r1]).astype(np.uint8)
-    mask_ori = cv2.imread('../data/test_2448/scene23/mask/6_6.png', 0)
     if mask is not None:
         maskCopy = np.array(mask).astype(np.uint8)
-        # show_photos([mask_ori, maskCopy])
         np.place(maskCopy, maskCopy > 0, 255)
         img = cv2.bitwise_and(img, img, mask=maskCopy)
-        # show_photos([img, maskCopy])
     x, y, w, h = xywh[0], xywh[1], xywh[2], xywh[3]
     img = img[y: y + h, x: x + w, :]
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    peppers_b = cv2.GaussianBlur(img, (5, 5), 0)
+    peppers_t = copy.deepcopy(peppers_b)
 
-    canny_img = cv2.Canny(img, 200, 300)
+    # 返回的是经过非极大值抑制后的矩阵
+    peppers_g = grad.gradient(peppers_t)
 
-    # show_photos([canny_img])
+    # 返回的是迭代后的最优阈值
+    peppers_T = loop.loop(peppers_g)
+    peppers_ret, image = cv2.threshold(peppers_b, peppers_T, 255, cv2.THRESH_OTSU)
+    peppers_T = min(peppers_ret, peppers_T)
+
+    canny_img = cv2.Canny(peppers_b, 40, 80)
     kernel = np.ones((2, 2), np.uint8)
+    # 膨胀
     canny_img = cv2.dilate(canny_img, kernel, iterations=1)
-    # show_photos([canny_img])
+    # 开运算，先膨胀再腐蚀
     canny_img = cv2.morphologyEx(canny_img, cv2.MORPH_OPEN, kernel)
+    show_photos([canny_img])
+    if mask is None:
+        cv2.imwrite(osp.join(opt.data_path, 'mask.jpg'), canny_img)
     border_top_bottom = bbox_range - h
     if border_top_bottom % 2 == 0:
         top = bottom = border_top_bottom // 2
@@ -116,10 +133,7 @@ def clip_and_scaling(img, xywh, bbox_range, mask=None, mask_small=None):
         kernel = np.ones((10, 10), np.uint8)
         erosion = cv2.erode(mask_small_copy, kernel, iterations=1)
         constant = cv2.bitwise_and(constant, constant, mask=erosion)
-        # show_photos([mask_small_copy, erosion, constant])
     res = cv2.resize(constant, (128, 128), interpolation=cv2.INTER_AREA)
-
-    # show_photos([canny_img, constant, res])
     return x, y, res
 
 
@@ -378,7 +392,6 @@ def creatPose(u_tar, v_tar):
             continue
         if val_pose(a, b, g, x, y, r, u_tar=u_tar, v_tar=v_tar, is_create_val=True, spe_points2D=spe_points2D):
             return [a, b, g, x, y, r]
-
 
 
 def overlay_img(overlay_num, scene_dir_name):

@@ -19,14 +19,14 @@ def read_yaml(yaml_path):
 
 class DefaultConfig(object):
     postfix = ''
-    obj_id = 6
+    obj_id = 41
     main_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     data_path_root = osp.join(main_path, 'data')
     data_path = osp.join(main_path, 'data', str(obj_id))
     if not osp.exists(data_path):
         os.mkdir(data_path)
     train_data_root = osp.join(data_path, 'train_data')  # 训练集存放路径os.path.join(main_path,'train_data')
-    train_pose_root = osp.join(data_path, 'pose_set')
+    train_pose_root = osp.join(data_path, 'pose_set_norm')
     test_data_root = osp.join(data_path_root, 'test_2448')
     vis_path = osp.join(data_path_root, 'vis', str(obj_id))
     if not osp.exists(vis_path):
@@ -40,14 +40,14 @@ class DefaultConfig(object):
     log_path = osp.join(main_path, 'logs', str(obj_id))
     log_train = osp.join(log_path, 'train' + postfix)
     log_test = osp.join(log_path, 'test' + postfix)
-    pose_num = 64  # 全训练集是100
-    batch_size = 1024  # batch size
+    pose_num = 32  # 全训练集是100
+    batch_size = 900  # batch size
     use_gpu = True  # user GPU or not
     num_workers = 16  # how many workers for loading data
-    print_freq = 500  # print info every N batch
+    print_freq = 100  # print info every N batch
     adjust = 10
-    save_fre = 20
-    bbox_len = read_yaml(osp.join(data_path_root, 'obj_bbox_length.yml'))[str(obj_id)]
+    save_fre = 40
+    bbox_len = read_yaml(osp.join(data_path, 'obj_bbox_length.yml'))[str(obj_id)]
     width = 2448
     height = 2048
     ox = 1239.951701787861  # 相机内参

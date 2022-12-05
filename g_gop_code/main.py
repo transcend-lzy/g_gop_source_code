@@ -4,7 +4,7 @@ import numpy
 from model import *
 from config import opt
 from dataset import GenImg
-from tqdm import tqdm
+from tqdm import tqdm, trange
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from multiprocessing import Pool
@@ -67,7 +67,7 @@ def pose_iterative(model, img, xywh, loss_meter, is_refine=None, mask=None, mask
         i.requires_grad = False
     update_times = {}
     output = None
-    for ite in range(opt.test_ite):
+    for ite in trange(opt.test_ite):
         pose_valid = True
         if ite != 0:
             for j in range(batch):
@@ -198,7 +198,7 @@ def test_multi_process(scene_dir_name, postfix=''):
     loss_meter = meter.AverageValueMeter()
     pool = Pool(processes=2)
     res_l = []
-    test_num = 3
+    test_num = 2
     start_time = time.time()
     for i in tqdm(range(test_num)):
         ret = pool.apply_async(mutil_test, args=(scene_path, i + 1, model, loss_meter, postfix))
@@ -234,9 +234,7 @@ def test(scene_dir_name):
                 torch.load(os.path.join(opt.save_model_path, str(pth) + ".pth")))
     model.eval()
     loss_meter = meter.AverageValueMeter()
-    pool = Pool(processes=3)
-    res_l = []
-    test_num = 3
+    test_num = 1
     start_time = time.time()
     img_all = np.zeros((test_num, 128, 128))
     result_pick_all = np.zeros((test_num, 1, 6))
@@ -307,6 +305,7 @@ def train():
         loss_meter.reset()
         for i, (data, label) in tqdm(enumerate(train_dataloader)):
             input = torch.as_tensor(label, dtype=torch.float32)
+            show_photos([input])
             input = Variable(input).to(device)
             target = Variable(data).to(device)
             output = model(input)  # 这时候已经是二值图像了
@@ -342,7 +341,7 @@ def train():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--is_train", action='store_true')
-    parser.add_argument("--scene_dir_name", type=str, default='scene23')
+    parser.add_argument("--scene_dir_name", type=str, default='blur')
 
     args = parser.parse_args()
     if args.is_train:
@@ -350,3 +349,4 @@ if __name__ == '__main__':
     else:
         torch.multiprocessing.set_start_method('spawn', force=True)
         test_multi_process(args.scene_dir_name)
+        # test(args.scene_dir_name)

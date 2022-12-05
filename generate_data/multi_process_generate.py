@@ -1,6 +1,6 @@
 import argparse
 import copy
-import multiprocessing as mp
+from multiprocessing import Pool
 import os.path as osp
 import inspect
 import os
@@ -42,47 +42,47 @@ def start_sample_pose_generator(is_val, obj_id, set_length, all_set):
 def arg_parse():
     parser = argparse.ArgumentParser(description="生成训练数据")
     parser.add_argument('--only_image', action='store_true')
-    parser.add_argument('-s', '--start', type=int, default=0)
-    parser.add_argument('-e', '--end', type=int, default=1)
+    parser.add_argument('-s', '--start', type=int, default=0)  # 非val有作用，控制图像生成的start
+    parser.add_argument('-e', '--end', type=int, default=1) # 非val有作用，控制图像生成的end
     parser.add_argument('-b', '--obj_id', type=str, default='6')
-    parser.add_argument('--is_val', action='store_false')
+    parser.add_argument('--is_val', action='store_true')
     parser.add_argument('-l', '--set_length', type=int, default=10000)
-    parser.add_argument('-a', '--all_set', type=int, default=64)
     args = parser.parse_args()
     return args
 
 
 def get_process_list(start, end):
     all_set = end - start
-    single = all_set / 4
+    single = all_set // 4
     remainder = all_set % 4
     res = [0, 0, 0, 0]
     for i in range(4):
         res[i] = single
         if i < remainder:
             res[i] += 1
-    start = 0
     start_and_end = []
     for i in res:
         end = start + i
         cur_start_end = [start, end]
         start = end
         start_and_end.append(copy.deepcopy(cur_start_end))
+    print(start_and_end)
     return start_and_end
 
 
 def main(arg):
     if not args.only_image:
-        start_sample_pose_generator(arg.is_val, args.obj_id, arg.set_length, arg.all_set)
-    p_img = None
-    if (args.start - args.end) <= 4:
+        start_sample_pose_generator(arg.is_val, args.obj_id, arg.set_length, arg.end - arg.start)
+    pool = Pool(processes=4)
+    if (args.end - args.start) <= 4:
         for i in range(args.start, args.end):
-            p_img = mp.Process(target=start_sample_image_generator, args=(arg.is_val, arg.obj_id, i, i + 1))
+            pool.apply_async(start_sample_image_generator, args=(arg.is_val, arg.obj_id, i, i + 1))
     else:
         start_and_end = get_process_list(args.start, args.end)
         for i in start_and_end:
-            p_img = mp.Process(target=start_sample_image_generator, args=(arg.is_val, arg.obj_id, i[0], i[1]))
-    p_img.start()
+            pool.apply_async(start_sample_image_generator, args=(arg.is_val, arg.obj_id, i[0], i[1]))
+    pool.close()
+    pool.join()
 
 
 if __name__ == '__main__':

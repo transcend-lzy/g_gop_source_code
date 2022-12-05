@@ -26,8 +26,7 @@ class GenPose(object):
         self.FocalLength_x = FocalLength_x  # 相机内参
         self.FocalLength_y = FocalLength_y  # 相机内参
         self.K = np.array([[self.FocalLength_x, 0, self.ox], [0, self.FocalLength_y, self.oy], [0, 0, 1]])
-        dir_name = os.path.dirname(os.path.abspath(__file__))
-        self.stl_path = osp.join(dir_name, 'CADmodels','stl','{}.stl'.format(self.modelIndex))
+        self.stl_path = osp.join(self.data_path, 'CADmodels','stl','{}.stl'.format(self.modelIndex))
         self.height = 2048  # 图片长
         self.width = 2448  # 图片宽
         self.img_range = read_yaml(osp.join(self.obj_data_path, 'obj_gop_range.yml'))[self.modelIndex]
@@ -172,9 +171,9 @@ class GenPose(object):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--is_val', action='store_true') # 默认是false，如果传了就是true
-    parser.add_argument('-o', '--obj_id', type=str, default='6')
+    parser.add_argument('-o', '--obj_id', type=str, default='41')
     parser.add_argument('-s', '--set_length', type=int, default=10000)
-    parser.add_argument('-a', '--all_set', type=int, default=64)
+    parser.add_argument('-a', '--all_set', type=int, default=1)
     args = parser.parse_args()
     pose_gen = GenPose(int(args.obj_id), args.set_length, args.all_set)
     start_index = 0

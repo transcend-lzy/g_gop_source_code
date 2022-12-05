@@ -18,7 +18,7 @@ from tqdm import tqdm, trange
 
 
 class Gen(object):
-    def __init__(self, model_index, is_abg=True):
+    def __init__(self, model_index, is_rt=False):
         self.modelIndex = str(model_index)
         dir_name = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         if 'home' in dir_name:
@@ -41,12 +41,12 @@ class Gen(object):
         self.FocalLength_y = FocalLength_y / self.scale  # 相机内参
         self.aver_mm = read_yaml(osp.join(self.data_path, 'eight_points.yml'))[self.modelIndex][-1]
         self.aver = np.multiply(self.aver_mm, 0.001)
-        self.stl_path = osp.join(dir_name, 'generate_data/CADmodels/stl/{}.stl'.format(self.modelIndex))
+        self.stl_path = osp.join(self.data_path, 'CADmodels','stl','{}.stl'.format(self.modelIndex))
         self.height = 2048 // self.scale  # 图片长
         self.width = 2448 // self.scale  # 图片宽
         self.start = 0
         self.end = 0
-        self.is_abg = is_abg
+        self.is_rt = is_rt
 
     def init_pygame(self, width, height):
         pygame.init()
@@ -155,14 +155,7 @@ class Gen(object):
                 # pose = pose_set[pose_index]
                 u, v = int(pose[10]), int(pose[11])
                 # im = self.draw_cube_abg(a, b, g, x / 1000, y / 1000, r / 1000, tri, window, display)
-                if self.is_abg:
-                    a, b, g, x, y, r = pose[:6]
-                    if self.is_linux:
-                        im = np.array(self.draw_cube_abg(a, b, g, x, y, r, tri, window, display))
-                    else:
-                        im = np.array(self.draw_cube_abg(a, b, g, x, y, r, tri, window, display))
-                        im = np.array(self.draw_cube_abg(a, b, g, x, y, r, tri, window, display))
-                else:
+                if self.is_rt:
                     a, b, g, x, y, z = pose[:6]
                     m2c_r = eulerAnglesToRotationMatrix([a, b, g])
                     m2c_t = np.array([[x, y, z]])
@@ -171,6 +164,13 @@ class Gen(object):
                     else:
                         im = np.array(self.draw_cube_rt(m2c_r, m2c_t, tri, window, display))
                         im = np.array(self.draw_cube_rt(m2c_r, m2c_t, tri, window, display))
+                else:
+                    a, b, g, x, y, r = pose[:6]
+                    if self.is_linux:
+                        im = np.array(self.draw_cube_abg(a, b, g, x, y, r, tri, window, display))
+                    else:
+                        im = np.array(self.draw_cube_abg(a, b, g, x, y, r, tri, window, display))
+                        im = np.array(self.draw_cube_abg(a, b, g, x, y, r, tri, window, display))
                 im_new = np.zeros((self.height, self.width, 3))
                 for i in range(3):
                     im_new[:, :, i] = im[:, :, i].T
@@ -188,7 +188,7 @@ class Gen(object):
         for j in range(self.start, self.end):
             dataset = []
             for i in range(1 + lens * j, 1 + lens * (j + 1)):
-                im = cv2.imread('./Edge_im/{}.png'.format(i))
+                im = cv2.imread(osp.join(self.img_path, str(j), str(i) + '.png'))
                 im = im[:, :, 0]
                 assert len(np.shape(im)) == 2 and np.shape(im)[0] == 128 and np.shape(im)[1] == 128
                 dataset.append(im)
@@ -235,12 +235,12 @@ class Gen(object):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--is_val", action='store_true')  # 默认false， 传了就是true
-    parser.add_argument("--is_abg", action='store_true')  # 默认false， 传了就是true
+    parser.add_argument("--is_rt", action='store_true')  # 默认false， 传了就是true
     parser.add_argument("--obj_id", type=str, default='6')
     parser.add_argument("--start", type=int, default=0)
     parser.add_argument("--end", type=int, default=1)
     args = parser.parse_args()
-    gen_img = Gen(args.obj_id, args.is_abg)
+    gen_img = Gen(args.obj_id, args.is_rt)
     if args.is_val:
         gen_img.create_val_img()
     else:

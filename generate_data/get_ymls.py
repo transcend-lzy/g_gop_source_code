@@ -2,7 +2,7 @@ import yaml
 from convex_hull_3d.main import *
 from read_stl import stl_model
 from trans_pose import *
-from utils_gen import mkdir
+from utils import mkdir
 import matplotlib.pyplot as plt
 
 
@@ -66,9 +66,9 @@ def get_obj_gop_range_yml(random_bbox_path, obj_id, start=1, end=104):
             if j['obj_id'] == int(obj_id):
                 xywh = j['xywh']
                 xmin = min(xmin, xywh[0])
-                xmax = max(xmax, xywh[0] + xywh[2])
+                xmax = max(xmax, xywh[0] + xywh[3])
                 ymin = min(ymin, xywh[1])
-                ymax = max(ymax, xywh[1] + xywh[3])
+                ymax = max(ymax, xywh[1] + xywh[2])
     obj_gop_range[str(obj_id)] = [xmin, xmax, ymin, ymax]
     parent_dir = osp.dirname(os.path.dirname(os.path.abspath(__file__)))
     data_dir = osp.join(parent_dir, 'data', obj_id)
@@ -131,17 +131,17 @@ def get_abg_range_yml(obj_id, abg_pose_path, start=1, end=104):
     create_yaml(abg_range, osp.join(data_dir, 'abg_range.yml'))
 
 
-def get_hull_points_yml():
+def get_hull_points_yml(start=40, end=41):
     """
     调用quick_hull生成凸包点
     """
     hull_points = {}
-    for i in range(38):
-        hull_points[str(i + 1)] = generate_arr(create_convex_hull(str(i + 1)))
+    for i in range(start, end):
+        hull_points[str(i + 1)] = generate_arr(create_convex_hull(str(i + 1)), unit='mm')
     parent_dir = osp.dirname(os.path.dirname(os.path.abspath(__file__)))
     data_dir = osp.join(parent_dir, 'data')
     mkdir(data_dir)
-    create_yaml(hull_points, osp.join(data_dir, 'hull_points.yml'))
+    create_yaml(hull_points, osp.join(data_dir, 'hull_points_41.yml'))
 
 
 def get_eight_points_yml():
@@ -149,25 +149,33 @@ def get_eight_points_yml():
     创建八个点，用来生成aver,eight_points_yml每个obj后面有9个点，分别是8个点加aver点
     """
     eight_points = {}
-    for index in range(38):
-        stl_path = osp.join('./CADmodels/stl', str(index + 1) + '.stl')
+
+    for index in range(40, 41):
+        stl_path = osp.join(dir_name, 'data', 'CADmodels', 'stl', str(index + 1) + '.stl')
         file = stl_model(stl_path)
-        x, y, z = 0., 0., 0.
+        x_min, y_min, z_min = 0., 0., 0.
+        x_max, y_max, z_max = 0., 0., 0.
         tri = file.tri
         # tri是三角面片，p0，p1，p2分别是三角面片的三个顶点
         for i in tri:
-            x = max(i['p0'][0], i['p1'][0], i['p2'][0], x)
-            y = max(i['p0'][1], i['p1'][1], i['p2'][1], y)
-            z = max(i['p0'][2], i['p1'][2], i['p2'][2], z)
-        x *= 1000
-        y *= 1000
-        z *= 1000
-        point = np.array([[x, y, z]])
+            x_max = max(i['p0'][0], i['p1'][0], i['p2'][0], x_max)
+            x_min = min(i['p0'][0], i['p1'][0], i['p2'][0], x_min)
+            y_max = max(i['p0'][1], i['p1'][1], i['p2'][1], y_max)
+            y_min = min(i['p0'][1], i['p1'][1], i['p2'][1], y_min)
+            z_max = max(i['p0'][2], i['p1'][2], i['p2'][2], z_max)
+            z_min = min(i['p0'][2], i['p1'][2], i['p2'][2], z_min)
+        x_max *= 1000
+        x_min *= 1000
+        y_max *= 1000
+        y_min *= 1000
+        z_max *= 1000
+        z_min *= 1000
+        point = np.array([[x_min, y_min, z_min]])
         # [0，x]是分别取i为0和x，这里组合最远点和最近点可以得到所有的八个点
-        for i in [0, x]:
-            for j in [0, y]:
-                for k in [0, z]:
-                    if i == x and j == y and k == z:
+        for i in [x_min, x_max]:
+            for j in [y_min, y_max]:
+                for k in [z_min, z_max]:
+                    if i == x_min and j == y_min and k == z_min:
                         continue
                     point = np.concatenate((point, np.array([[i, j, k]])), 0)
         aver = sum(point) / 8
@@ -176,16 +184,20 @@ def get_eight_points_yml():
     parent_dir = osp.dirname(os.path.dirname(os.path.abspath(__file__)))
     data_dir = osp.join(parent_dir, 'data')
     mkdir(data_dir)
-    create_yaml(eight_points, osp.join(data_dir, 'eight_points.yml'))
+    create_yaml(eight_points, osp.join(data_dir, 'eight_points_41.yml'))
 
 
-def generate_arr(hull_point):
+def generate_arr(hull_point, unit='m'):
     """
     将hull的point转换成数组
     """
     res = []
+    if unit == 'm':
+        scale = 1000
+    elif unit == 'mm':
+        scale = 1
     for i in hull_point:
-        res.append([float(i.x) * 1000, float(i.y) * 1000, float(i.z) * 1000])
+        res.append([float(i.x) * scale, float(i.y) * scale, float(i.z) * scale])
     return res
 
 
@@ -196,14 +208,14 @@ def get_special_points_yml():
     special_points = {}
     parent_dir = osp.dirname(os.path.dirname(os.path.abspath(__file__)))
     data_dir = osp.join(parent_dir, 'data')
-    eight_points = read_yaml(osp.join(data_dir, 'eight_points.yml'))
-    hull_points = read_yaml(osp.join(data_dir, 'hull_points.yml'))
+    eight_points = read_yaml(osp.join(data_dir, 'eight_points_41.yml'))
+    hull_points = read_yaml(osp.join(data_dir, 'hull_points_41.yml'))
     for obj_id in eight_points.keys():
         aver = eight_points[str(obj_id)][-1]
         if obj_id in hull_points.keys():
             special_point_single = np.array(hull_points[str(obj_id)]) - np.array(aver)
             special_points[obj_id] = np.around(special_point_single, decimals=2).tolist()
-    create_yaml(special_points, osp.join(data_dir, 'special_points.yml'))
+    create_yaml(special_points, osp.join(data_dir, 'special_points_41.yml'))
 
 
 def update_rt(m2c_r, m2c_t, aver):
@@ -248,23 +260,24 @@ def create_abg(rt_new_path_root, obj_id, start=1, end=104):
                 abg_gt['abg'] = [a, b, g, x, y, r]
         abg_gts[str(i)] = abg_gt
     parent_dir = osp.dirname(os.path.dirname(os.path.abspath(__file__)))
-    data_dir = osp.join(parent_dir, 'data')
+    data_dir = osp.join(parent_dir, 'data', str(obj_id), 'test')
     mkdir(data_dir)
     create_yaml(abg_gts, osp.join(data_dir, 'gt_abg.yml'))
 
 
 if __name__ == '__main__':
-    id = 6
-    scene_path = '../scene23'
-    bbox_path = '../scene23/bboxOffset.yml'
-    gt_path = '../scene23/gt.yml'
-    abg_path = '../data/gt_abg_new.yml'
-    # get_obj_bbox_length_yml(bbox_path, 6)
-    # get_obj_gop_range_yml(bbox_path, 6, 1,10)
-    # get_hull_points_yml()
-    # get_eight_points_yml()
-    # get_special_points_yml()
-    # val_range_hist(abg_path, 1, 40)
-    create_abg(scene_path, 6, 1, 104)
-    # get_abg_range_yml(6, abg_path, 1, 40)
+    id = 41
+    dir_name = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    scene_path = osp.join(dir_name, 'data', str(id), 'test')
+    bbox_path = osp.join(scene_path, 'bboxOffset.yml')
+    gt_path = osp.join(scene_path, 'gt.yml')
+    # get_obj_bbox_length_yml(bbox_path, id)
+    # get_obj_gop_range_yml(bbox_path, id, 1,1)
+    get_hull_points_yml()
+    get_eight_points_yml()
+    get_special_points_yml()
+    # create_abg(scene_path, id, 1, 2)
+    # abg_path = osp.join(osp.join(dir_name, 'data'), 'gt_abg.yml')
+    # val_range_hist(abg_path, 1, 2)
+    # get_abg_range_yml(id, abg_path, 1, 2)
 
